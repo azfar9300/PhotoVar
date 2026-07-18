@@ -1,18 +1,26 @@
 // State & Variabel Global
 let peer;
-let conn;
-let hasControl = true; 
-let capturedPhotos = [];
+let dataConn; // Untuk kirim data (shutter, pass control)
+let currentCall; // Untuk streaming video
+let localStream;
+let hasControl = true;
 let isCapturing = false;
+let capturedPhotos = [];
 
 // DOM Elements
-const video = document.getElementById('webcam');
-const outCanvas = document.getElementById('output-canvas');
-const ctx = outCanvas.getContext('2d');
+const videoLocal = document.getElementById('video-local');
+const videoRemote = document.getElementById('video-remote');
+const canvasLocal = document.getElementById('canvas-local');
+const canvasRemote = document.getElementById('canvas-remote');
+const canvasComposite = document.getElementById('canvas-composite');
 const stripCanvas = document.getElementById('photos-strip');
+
+const ctxLocal = canvasLocal.getContext('2d');
+const ctxRemote = canvasRemote.getContext('2d');
+const ctxComposite = canvasComposite.getContext('2d');
 const stripCtx = stripCanvas.getContext('2d');
 
-const btnConnect = document.getElementById('btn-connect');
+const btnCall = document.getElementById('btn-call');
 const btnSnap = document.getElementById('btn-snap');
 const btnPass = document.getElementById('btn-pass');
 const btnDownload = document.getElementById('btn-download');
@@ -23,81 +31,155 @@ const currentControllerText = document.getElementById('current-controller');
 const countdownEl = document.getElementById('countdown');
 
 // ==========================================
-// 1. INITIALIZE MEDIAPIPE AI BACKGROUND REMOVAL
+// 1. MEDIAPIPE AI SETUP (PROCESS EACH STREAM)
 // ==========================================
-const selfieSegmentation = new SelfieSegmentation({
-    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
-});
-selfieSegmentation.setOptions({ modelSelection: 1 }); // 1 = model lanskap/lebih detail
-selfieSegmentation.onResults(onSegmentationResults);
+// Kita pakai 2 instance AI terpisah: Satu untuk Lokal, satu untuk Remote
+const aiLocal = new SelfieSegmentation({ locateFile: (file) => `[https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/$](https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/$){file}` });
+const aiRemote = new SelfieSegmentation({ locateFile: (file) => `[https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/$](https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/$){file}` });
 
-function onSegmentationResults(results) {
+aiLocal.setOptions({ modelSelection: 1 }); // 1 = landscape mode
+aiRemote.setOptions({ modelSelection: 1 });
+
+aiLocal.onResults((results) => onSegmentationResults(results, ctxLocal, canvasLocal, videoLocal));
+aiRemote.onResults((results) => onSegmentationResults(results, ctxRemote, canvasRemote, videoRemote));
+
+function onSegmentationResults(results, ctx, canvas, sourceVideo) {
+    // 1. Bersihkan canvas
     ctx.save();
-    ctx.clearRect(0, 0, outCanvas.width, outCanvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Gambar topeng/mask dari AI terlebih dahulu
-    ctx.drawImage(results.segmentationMask, 0, 0, outCanvas.width, outCanvas.height);
+    // 2. Gambar mask dari AI
+    ctx.drawImage(results.segmentationMask, 0, 0, canvas.width, canvas.height);
     
-    // Trik Canvas Composite: Hanya potong & gambar video di dalam area topeng manusia
+    // 3. Trik Composite: Hanya gambar video di dalam mask (Background otomatis transparan)
     ctx.globalCompositeOperation = 'source-in';
-    ctx.drawImage(results.image, 0, 0, outCanvas.width, outCanvas.height);
+    ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
     ctx.restore();
+}
+
+// ==========================================
+// 2. MAIN COMPOSITING (PANGGUNG UTAMA BERDUA)
+// ==========================================
+// Fungsi ini berjalan terus-menerus (requestAnimationFrame) untuk menggabungkan 2 canvas AI tadi ke 1 panggung.
+function drawCompositeStage() {
+    // 1. Bersihkan panggung utama
+    ctxComposite.clearRect(0, 0, canvasComposite.width, canvasComposite.height);
+    
+    // Opsional: Kasih background studio virtual di sini sebelum menggambar orangnya
+    // Misal: ctxComposite.drawImage(studioBgImage, 0, 0, canvasComposite.width, canvasComposite.height);
+
+    // 2. Gambar Orang Lokal (misal: di kiri)
+    // Kita menempatkannya bersandingan agar "bertemu"
+    const orangW = 640;
+    const orangH = 480;
+    const paddingBawah = 0; // Tempel di bawah
+
+    // Posisikan Orang Lokal (Kiri-Tengah)
+    const xLokal = 0 + (canvasComposite.width / 2 - orangW) / 2 + 100; // Contoh positioning
+    const yLokal = canvasComposite.height - orangH - paddingBawah;
+    ctxComposite.drawImage(canvasLocal, xLokal, yLokal, orangW, orangH);
+
+    // 3. Gambar Orang Remote (misal: di kanan)
+    const xRemote = canvasComposite.width / 2 + (canvasComposite.width / 2 - orangW) / 2 - 100; // Contoh positioning
+    const yRemote = canvasComposite.height - orangH - paddingBawah;
+    ctxComposite.drawImage(canvasRemote, xRemote, yRemote, orangW, orangH);
+
+    // Panggil ulang terus
+    requestAnimationFrame(drawCompositeStage);
 }
 
 // Buka Kamera Device
 navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
     .then(stream => {
-        video.srcObject = stream;
-        video.addEventListener('playing', () => {
-            async function detectionFrame() {
-                if (!video.paused && !video.ended) {
-                    await selfieSegmentation.send({ image: video });
+        localStream = stream;
+        videoLocal.srcObject = stream;
+        videoLocal.addEventListener('playing', () => {
+            // Jalankan deteksi AI Lokal setelah video mulai play
+            async function detectionFrameLokal() {
+                if (!videoLocal.paused && !videoLocal.ended) {
+                    await aiLocal.send({ image: videoLocal });
                 }
-                requestAnimationFrame(detectionFrame);
+                requestAnimationFrame(detectionFrameLokal);
             }
-            detectionFrame();
+            detectionFrameLokal();
         });
+        
+        // Mulai render panggung utama (composite)
+        drawCompositeStage();
     })
     .catch(err => alert("Gagal mengakses kamera: " + err));
 
 
 // ==========================================
-// 2. NETWORK CONNECTION LOGIC (PEERJS)
+// 3. NETWORK & VIDEO CALL LOGIC (PEERJS)
 // ==========================================
-peer = new Peer(); // Menggunakan public cloud server broker gratis dari PeerJS
+peer = new Peer(); // Menggunakan public server broker gratis PeerJS
 
 peer.on('open', (id) => {
     document.getElementById('my-id').innerText = id;
 });
 
-// Menghandle device lain yang masuk duluan lewat ID kita
-peer.on('connection', (incomingConn) => {
-    conn = incomingConn;
-    setupConnectionListeners();
-    connectionStatus.innerText = "Terhubung dengan device jarak jauh!";
-    hasControl = false; // Yang menerima sambungan mengalah dulu, kontrol dipegang pemanggil
+// Menghandle device lain yang MEMANGGIL kita (Call)
+peer.on('call', (call) => {
+    connectionStatus.innerText = "Menerima panggilan video...";
+    // Jawab panggilan dengan stream lokal kita
+    call.answer(localStream);
+    handleCall(call);
+});
+
+// Menghandle device lain yang menghubungi via Data (Connection)
+peer.on('connection', (incomingDataConn) => {
+    dataConn = incomingDataConn;
+    setupDataListeners();
+    connectionStatus.innerText = "Terhubung data dengan device remote!";
+    hasControl = false; // Yang menerima sambungan mengalah dulu
     updateControlUI();
 });
 
-// Aksi tombol hubungkan manual ke device teman
-btnConnect.addEventListener('click', () => {
+// Aksi tombol hubungkan manual ke device teman (Call + Connect)
+btnCall.addEventListener('click', () => {
     const peerId = peerIdInput.value.trim();
     if (!peerId) return alert("Masukkan ID teman terlebih dahulu!");
     
-    conn = peer.connect(peerId);
-    setupConnectionListeners();
-    connectionStatus.innerText = "Mencoba terhubung...";
+    connectionStatus.innerText = "Mencoba memanggil teman...";
+    
+    // 1. Panggil Streaming Video
+    const call = peer.call(peerId, localStream);
+    handleCall(call);
+
+    // 2. Hubungkan Data Channel (untuk shutter & pass control)
+    dataConn = peer.connect(peerId);
+    setupDataListeners();
 });
 
-function setupConnectionListeners() {
-    conn.on('open', () => {
-        connectionStatus.innerText = "Terhubung dengan device jarak jauh!";
+function handleCall(call) {
+    currentCall = call;
+    call.on('stream', (remoteStream) => {
+        videoRemote.srcObject = remoteStream;
+        videoRemote.addEventListener('playing', () => {
+            connectionStatus.innerText = "Kalian berdua bertemu di panggung!";
+            // Jalankan deteksi AI Remote setelah video remote mulai play
+            async function detectionFrameRemote() {
+                if (!videoRemote.paused && !videoRemote.ended) {
+                    await aiRemote.send({ image: videoRemote });
+                }
+                requestAnimationFrame(detectionFrameRemote);
+            }
+            detectionFrameRemote();
+        });
+    });
+    call.on('close', () => { connectionStatus.innerText = "Panggilan video ditutup."; });
+}
+
+function setupDataListeners() {
+    dataConn.on('open', () => {
+        // connectionStatus.innerText = "Terhubung data jarak jauh!";
         hasControl = true; // Si pemanggil koneksi memegang kendali awal
         updateControlUI();
     });
 
     // Mendengarkan instruksi/data masuk dari device remote
-    conn.on('data', (data) => {
+    dataConn.on('data', (data) => {
         if (data.type === 'START_SHOOT') {
             runShootSequence();
         } else if (data.type === 'PASS_CONTROL') {
@@ -115,19 +197,19 @@ function updateControlUI() {
 
 // Mengoper hak kendali memicu jepretan foto
 btnPass.addEventListener('click', () => {
-    if (!conn) return;
+    if (!dataConn) return;
     hasControl = false;
     updateControlUI();
-    conn.send({ type: 'PASS_CONTROL' });
+    dataConn.send({ type: 'PASS_CONTROL' });
 });
 
 
 // ==========================================
-// 3. PHOTO SHUTTER & COUNTDOWN SYSTEM
+// 4. SHUTTER SYSTEM (FOTO FRAME GABUNGAN)
 // ==========================================
 btnSnap.addEventListener('click', () => {
-    if (!hasControl) return;
-    if (conn) conn.send({ type: 'START_SHOOT' }); // Suruh device sebelah ikut hitung mundur
+    if (!hasControl || !dataConn) return alert("Belum terhubung penuh ke device teman.");
+    if (dataConn) dataConn.send({ type: 'START_SHOOT' }); // Suruh device sebelah ikut hitung mundur
     runShootSequence();
 });
 
@@ -147,11 +229,11 @@ function runShootSequence() {
                 countdownEl.innerText = timeLeft;
             } else {
                 clearInterval(interval);
-                countdownEl.innerText = "📸";
+                countdownEl.innerText = "📸"; // Jepret!
                 
-                // Beri jeda sangat singkat agar user sadar flash jepretan berjalan
                 setTimeout(() => {
                     countdownEl.innerText = "";
+                    // Tangkap Frame Utama (Composite Stage)
                     captureFrameToArray();
                     photoCount++;
                     
@@ -161,7 +243,7 @@ function runShootSequence() {
                         isCapturing = false;
                         generatePhotoboothCard();
                     }
-                }, 400);
+                }, 400); // Jeda flash sebentar
             }
         }, 1000);
     }
@@ -169,18 +251,18 @@ function runShootSequence() {
 }
 
 function captureFrameToArray() {
-    // Manfaatkan canvas bayangan (offscreen) untuk freeze frame gambar transparan saat ini
+    // Manfaatkan canvas bayangan (offscreen) untuk freeze frame gambar transparan PANGGUNG UTAMA
     const memCanvas = document.createElement('canvas');
-    memCanvas.width = outCanvas.width;
-    memCanvas.height = outCanvas.height;
+    memCanvas.width = canvasComposite.width;
+    memCanvas.height = canvasComposite.height;
     const memCtx = memCanvas.getContext('2d');
-    memCtx.drawImage(outCanvas, 0, 0);
+    memCtx.drawImage(canvasComposite, 0, 0);
     capturedPhotos.push(memCanvas);
 }
 
 
 // ==========================================
-// 4. CANVAS CARD STITCHING & DOWNLOAD
+// 5. CANVAS CARD STITCHING & DOWNLOAD
 // ==========================================
 function generatePhotoboothCard() {
     if (capturedPhotos.length < 3) return;
@@ -188,19 +270,21 @@ function generatePhotoboothCard() {
     // Bersihkan canvas strip foto utama
     stripCtx.clearRect(0, 0, stripCanvas.width, stripCanvas.height);
     
-    const targetW = 200;
-    const targetH = 150;
-    const xOffset = 20; // Margin kiri-kanan
-    let yOffset = 30;  // Margin atas pertama
+    const xOffset = 20; // Margin kiri-kanan kartu
+    let yOffset = 40;  // Margin atas kartu
+    
+    // Di kartu, foto panggung gabungan (1280x720) kita kecilkan
+    const targetW = 400; // Kartu lebih lebar sedikit
+    const targetH = 225; // 16:9 ratio
 
     capturedPhotos.forEach((photo) => {
-        // Kotak bayangan latar belakang per foto (opsional, agar objek terlihat meskipun latar strip transparan)
-        stripCtx.fillStyle = "rgba(255, 255, 255, 0.1)";
+        // Kotak bayangan latar belakang per foto (putih tipis agar orang transparan tidak hilang)
+        stripCtx.fillStyle = "rgba(255, 255, 255, 0.05)";
         stripCtx.fillRect(xOffset, yOffset, targetW, targetH);
         
-        // Render objek transparan hasil tangkapan AI
+        // Render panggung utama hasil tangkapan berdua tadi
         stripCtx.drawImage(photo, xOffset, yOffset, targetW, targetH);
-        yOffset += targetH + 20; // Kasih space jarak antar foto ke bawah
+        yOffset += targetH + 30; // Kasih space jarak antar foto ke bawah
     });
 
     // Tampilkan canvas hasil dan tombol unduh
@@ -211,7 +295,7 @@ function generatePhotoboothCard() {
 // Download hasil jadi PNG Transparan
 btnDownload.addEventListener('click', () => {
     const link = document.createElement('a');
-    link.download = 'online-photobooth-transparan.png';
+    link.download = 'photobooth-berdua-satuframe.png';
     link.href = stripCanvas.toDataURL('image/png');
     link.click();
 });
