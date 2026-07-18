@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2P Online Photobooth dengan AI Transparan</title>
+    <!-- Import File CSS Eksternal -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Load MediaPipe Selfie Segmentation (AI Hapus Background) -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js" crossorigin="anonymous"></script>
+    <!-- Load PeerJS (Koneksi P2P Jarak Jauh) -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <h1>📸 P2P AI Photobooth</h1>
+    <p>3 Foto, Latar Transparan, Remote Jarak Jauh</p>
+
+    <!-- Kontrol Koneksi Antar Device -->
+    <div class="controls">
+        <h3>1. Koneksi Device</h3>
+        <p>ID Device Anda: <span id="my-id">Menghubungkan server...</span></p>
+        <input type="text" id="peer-id-input" placeholder="Masukkan ID Device Teman">
+        <button type="button" class="secondary" id="btn-connect">Hubungkan</button>
+        <div class="status" id="connection-status">Belum terhubung ke device lain.</div>
+    </div>
+
+    <!-- Kontrol Sesi & Lempar Kendali -->
+    <div class="controls">
+        <h3>2. Kontrol Sesi</h3>
+        <p>Pemegang Kendali Tombol: <span id="current-controller">Lokal (Anda)</span></p>
+        <button type="button" id="btn-snap">Ambil Foto (3x)</button>
+        <button type="button" class="secondary" id="btn-pass">Lempar Kendali ke Teman</button>
+    </div>
+
+    <!-- Area Preview Kamera & AI -->
+    <div id="camera-zone">
+        <h2 id="countdown"></h2>
+        <video id="webcam" autoplay playsinline style="display: none;"></video>
+        <!-- Canvas tempat render objek manusia transparan -->
+        <canvas id="output-canvas" width="640" height="480"></canvas>
+    </div>
+
+    <!-- Hasil Akhir Kartu Photobooth -->
+    <div class="result-zone">
+        <h3>3. Hasil Kartu Foto</h3>
+        <canvas id="photos-strip" width="240" height="700"></canvas>
+        <br>
+        <button type="button" id="btn-download">Unduh Kartu (PNG Transparan)</button>
+    </div>
+</div>
+
+<!-- Import File JS Eksternal -->
+<script src="app.js"></script>
+</body>
+</html>

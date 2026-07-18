@@ -1,0 +1,101 @@
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #121212;
+    color: white;
+    text-align: center;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+video, canvas {
+    max-width: 100%;
+    border-radius: 8px;
+    background: #222;
+}
+
+#camera-zone {
+    position: relative;
+    display: inline-block;
+}
+
+#countdown {
+    position: absolute;
+    width: 100%;
+    top: 40%;
+    font-size: 60px;
+    margin: 0;
+    color: #fff;
+    text-shadow: 2px 2px 10px rgba(0,0,0,0.8);
+    pointer-events: none;
+}
+
+.controls {
+    margin: 20px 0;
+    padding: 15px;
+    background: #1e1e1e;
+    border-radius: 8px;
+}
+
+.controls input {
+    padding: 8px;
+    width: 200px;
+    border-radius: 4px;
+    border: none;
+}
+
+#my-id {
+    color: #2ed573;
+    font-weight: bold;
+}
+
+#current-controller {
+    color: #ffa502;
+    font-weight: bold;
+}
+
+button {
+    background: #ff4757;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin: 5px;
+    transition: 0.2s;
+}
+
+button:disabled {
+    background: #555;
+    cursor: not-allowed;
+}
+
+button.secondary {
+    background: #2ed573;
+}
+
+.status {
+    color: #ffa502;
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+.result-zone {
+    margin-top: 25px;
+}
+
+#photos-strip {
+    margin-top: 20px;
+    border: 4px solid white;
+    display: none;
+    background: transparent;
+}
+
+#btn-download {
+    display: none;
+}
