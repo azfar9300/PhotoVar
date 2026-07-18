@@ -1,45 +1,88 @@
-body {
-    font-family: 'Segoe UI', Arial, sans-serif;
-    background: #121212;
-    color: white;
-    text-align: center;
+/* Reset Dasar */
+* {
+    box-sizing: border-box;
     margin: 0;
-    padding: 20px;
+    padding: 0;
+}
+
+body {
+    font-family: '-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: #fdfdfd;
+    color: rgb(0, 0, 0);
+    text-align: center;
+    padding: 15px;
+    line-height: 1.5;
 }
 
 .container {
-    max-width: 1400px;
+    max-width: 1000px;
     margin: 0 auto;
-}
-
-.controls {
-    margin: 20px 0;
-    padding: 15px;
-    background: #1e1e1e;
-    border-radius: 8px;
-    border: 1px solid #333;
-}
-
-.controls input {
     padding: 10px;
-    width: 250px;
-    border-radius: 4px;
+}
+
+h1 {
+    font-size: 1.8rem;
+    margin-bottom: 5px;
+    color: #000000;
+}
+
+.subtitle {
+    font-size: 0.9rem;
+    color: #3a3a3a;
+    margin-bottom: 20px;
+}
+
+/* Kartu Box Kontrol */
+.controlsCard {
+    background: #1e1e1e;
+    border-radius: 12px;
+    border: 1px solid #2d2d2d;
+    padding: 15px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+.controlsCard h3 {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+    color: #fff;
+}
+
+/* Grup Input & Tombol agar fleksibel */
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+    margin: 15px 0;
+}
+
+.controlsCard input {
+    padding: 12px;
+    width: 100%;
+    max-width: 280px;
+    border-radius: 8px;
     border: 1px solid #444;
     background: #2a2a2a;
     color: #fff;
     text-align: center;
     font-size: 16px;
     letter-spacing: 1px;
+    outline: none;
 }
 
 #my-id {
     color: #2ed573;
     font-weight: bold;
-    font-size: 1.3em;
+    font-size: 1.1rem;
     letter-spacing: 1px;
     background: rgba(46, 213, 115, 0.1);
-    padding: 2px 8px;
-    border-radius: 4px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    display: inline-block;
+    margin-top: 5px;
+    word-break: break-all;
 }
 
 #current-controller {
@@ -47,72 +90,111 @@ body {
     font-weight: bold;
 }
 
+/* Pengaturan Tombol Global */
 button {
-    background: #ff4757;
+    background: #e10013;
     color: white;
     border: none;
-    padding: 10px 25px;
-    font-size: 16px;
-    border-radius: 5px;
+    padding: 12px 20px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 8px;
     cursor: pointer;
-    margin: 5px;
-    transition: 0.2s ease-in-out;
+    transition: transform 0.1s ease, background 0.2s ease;
+    width: 100%;
+    max-width: 200px;
+}
+
+button:active {
+    transform: scale(0.98);
 }
 
 button:disabled {
-    background: #555;
+    background: #444;
+    color: #888;
     cursor: not-allowed;
-    opacity: 0.5;
+    transform: none;
+    opacity: 0.6;
 }
 
 button.secondary {
-    background: #2ed573;
+    background: #00cd1f;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    width: 100%;
+    margin-top: 10px;
 }
 
 .status {
     color: #ffa502;
-    font-weight: bold;
-    margin: 10px 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-top: 5px;
 }
 
-.composite-zone {
-    margin-top: 30px;
+/* Layout Grid Utama */
+.main-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 30px;
+    align-items: start;
+}
+
+/* Zona Area Foto Gabungan */
+.composite-zone, .result-zone {
+    width: 100%;
 }
 
 .camera-stage {
     position: relative;
-    display: inline-block;
+    width: 100%;
+    margin: 15px 0;
+    display: flex;
+    justify-content: center;
 }
 
+/* Kunci Fleksibilitas Canvas Utama */
 #canvas-composite {
     width: 100%;
-    max-width: 1280px;
+    max-width: 720px; /* Batasi biar gak kebesaran di laptop */
     height: auto;
-    border-radius: 8px;
-    background: #222;
-    border: 4px solid #fff;
-    box-shadow: 0 0 20px rgba(255,255,255,0.3);
+    aspect-ratio: 16 / 9; /* Jaga proporsi layar lebar */
+    border-radius: 12px;
+    background: #151515;
+    border: 3px solid #fff;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
 }
 
 #countdown {
     position: absolute;
-    width: 100%;
-    top: 35%;
-    font-size: 120px;
-    margin: 0;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 80px;
     color: #fff;
-    text-shadow: 2px 2px 20px rgba(0,0,0,0.9);
+    text-shadow: 0px 4px 15px rgba(0,0,0,0.8);
     pointer-events: none;
     z-index: 10;
 }
 
-.result-zone {
-    margin-top: 40px;
+/* Zona Hasil Frame Cetak Strip */
+.strip-wrapper {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin: 15px 0;
 }
 
 #photos-strip {
-    margin-top: 20px;
-    border: 4px solid white;
+    max-width: 220px; /* Perkecil preview di layar agar pas */
+    width: 100%;
+    height: auto;
+    border: 3px solid white;
+    border-radius: 8px;
     display: none;
     background: transparent;
 }
@@ -120,4 +202,42 @@ button.secondary {
 #btn-download {
     display: none;
     background: #007bff;
+    max-width: 250px;
+    margin: 10px auto 0 auto;
+}
+
+/* ==========================================
+   MEDIA QUERY: UNTUK LAYAR LAPTOP / TABLET DEWASA
+   ========================================== */
+@media (min-width: 768px) {
+    h1 {
+        font-size: 2.3rem;
+    }
+    
+    .subtitle {
+        font-size: 1rem;
+    }
+
+    .input-group {
+        flex-direction: row;
+        gap: 15px;
+    }
+
+    button {
+        width: auto;
+    }
+
+    /* Ubah layout jadi 2 Kolom berdampingan di laptop */
+    .main-layout {
+        grid-template-columns: 1.6fr 1fr;
+        gap: 25px;
+    }
+    
+    #canvas-composite {
+        max-width: 100%; /* Penuhi kolom di layar laptop */
+    }
+
+    #photos-strip {
+        max-width: 260px;
+    }
 }

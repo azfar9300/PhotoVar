@@ -13,47 +13,59 @@
 <body>
 
 <div class="container">
-    <h1>VAR</h1>
-    <p>Hubungkan, Potong Latar, dan Foto Bareng Jarak Jauh</p>
+    <h1>PHOTOVAR</h1>
+    <p class="subtitle">yang jauh menjadi dekat</p>
 
     <!-- Kontrol Koneksi P2P -->
-    <div class="controls">
-        <h3>1. Koneksi Device</h3>
-        <p>ID Device Anda: <span id="my-id">Menghubungkan server...</span></p>
-        <input type="text" id="peer-id-input" placeholder="Masukkan 8 Digit ID Teman">
-        <button type="button" class="secondary" id="btn-call">Hubungkan & Panggil</button>
+    <div class="controlsCard">
+        <h3>Koneksi Device</h3>
+        <p>ID : <span id="my-id">Menghubungkan server...</span></p>
+        <div class="input-group">
+            <input type="text" id="peer-id-input" placeholder="Masukkan 8 Digit ID Teman" maxlength="8">
+            <button type="button" class="secondary" id="btn-call">Hubungkan</button>
+        </div>
         <div class="status" id="connection-status">Belum terhubung ke device lain.</div>
     </div>
 
-    <!-- Area Komposit (Panggung Utama) -->
-    <div class="composite-zone">
-        <h3>2. Area Foto Gabungan</h3>
-        <p>Kalian berdua bertemu di sini secara real-time!</p>
-        <div class="camera-stage">
-            <h2 id="countdown"></h2>
-            <canvas id="canvas-composite" width="1280" height="720"></canvas>
+    <!-- Layout Utama Berdampingan (Desktop) / Atas-Bawah (Mobile) -->
+    <div class="main-layout">
+        
+        <!-- Area Komposit (Panggung Utama) -->
+        <div class="composite-zone">
+            <h3>AREA</h3>
+            <p>Kalian berdua bertemu di sini</p>
+            <div class="camera-stage">
+                <h2 id="countdown"></h2>
+                <canvas id="canvas-composite" width="1280" height="720"></canvas>
+            </div>
+            <div class="shutter-controls controlsCard">
+                <p>Kendali Sesi: <span id="current-controller">Lokal (Anda)</span></p>
+                <div class="action-buttons">
+                    <button type="button" id="btn-snap">Ambil Foto (3x)</button>
+                    <button type="button" class="secondary" id="btn-pass">Lempar Kendali</button>
+                </div>
+            </div>
         </div>
-        <div class="shutter-controls controls">
-            <p>Pemegang Kendali Sesi: <span id="current-controller">Lokal (Anda)</span></p>
-            <button type="button" id="btn-snap">Ambil Foto Berdua (3x)</button>
-            <button type="button" class="secondary" id="btn-pass">Lempar Kendali</button>
+
+        <!-- Hasil Akhir Kartu Photobooth -->
+        <div class="result-zone">
+            <h3>Hasil Kartu</h3>
+            <p>Pratinjau strip foto Anda akan muncul di bawah ini.</p>
+            <div class="strip-wrapper">
+                <!-- Ukuran diganti ke resolusi cetak 600x1800 (Rasio 1:3 Klasik Strip) -->
+                <canvas id="photos-strip" width="600" height="1800"></canvas>
+            </div>
+            <button type="button" id="btn-download">Unduh Kartu (PNG)</button>
         </div>
+
     </div>
 
-    <!-- Area Buffer Latar Belakang AI (Disembunyikan dari display) -->
+    <!-- Area Buffer Latar Belakang AI (Disembunyikan dari layar) -->
     <div class="previews-zone" style="display:none;">
         <video id="video-local" autoplay playsinline></video>
         <canvas id="canvas-local" width="640" height="480"></canvas>
         <video id="video-remote" autoplay playsinline></video>
         <canvas id="canvas-remote" width="640" height="480"></canvas>
-    </div>
-
-    <!-- Hasil Akhir Kartu Photobooth -->
-    <div class="result-zone">
-        <h3>3. Hasil Kartu Foto Berdua</h3>
-        <canvas id="photos-strip" width="440" height="1100"></canvas>
-        <br>
-        <button type="button" id="btn-download">Unduh Kartu (PNG Transparan)</button>
     </div>
 </div>
 

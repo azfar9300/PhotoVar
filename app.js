@@ -1,10 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Jalankan kode hanya setelah semua elemen HTML dan Library eksternal selesai dimuat browser
     initApp();
 });
 
 function initApp() {
-    // State & Variabel Global
     let peer;
     let dataConn; 
     let currentCall; 
@@ -13,7 +11,6 @@ function initApp() {
     let isCapturing = false;
     let capturedPhotos = [];
 
-    // DOM Elements
     const videoLocal = document.getElementById('video-local');
     const videoRemote = document.getElementById('video-remote');
     const canvasLocal = document.getElementById('canvas-local');
@@ -36,16 +33,12 @@ function initApp() {
     const currentControllerText = document.getElementById('current-controller');
     const countdownEl = document.getElementById('countdown');
 
-    // Cek ketersediaan library MediaPipe secara aman
     if (typeof SelfieSegmentation === 'undefined') {
-        console.error("Library MediaPipe SelfieSegmentation gagal dimuat. Cek koneksi internet atau tag script.");
+        console.error("Library MediaPipe SelfieSegmentation gagal dimuat.");
         connectionStatus.innerText = "Error: Gagal memuat AI Library.";
         return;
     }
 
-    // ==========================================
-    // FUNGSI GENERATE ID 8 DIGIT ACAK
-    // ==========================================
     function generateShortId(length = 8) {
         const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
         let result = '';
@@ -55,9 +48,7 @@ function initApp() {
         return result;
     }
 
-    // ==========================================
     // 1. MEDIAPIPE AI SETUP
-    // ==========================================
     const aiLocal = new SelfieSegmentation({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}` });
     const aiRemote = new SelfieSegmentation({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}` });
 
@@ -76,9 +67,7 @@ function initApp() {
         ctx.restore();
     }
 
-    // ==========================================
-    // 2. MAIN COMPOSITING (RERENDER AMAN)
-    // ==========================================
+    // 2. MAIN COMPOSITING
     function drawCompositeStage() {
         ctxComposite.clearRect(0, 0, canvasComposite.width, canvasComposite.height);
         
@@ -86,15 +75,18 @@ function initApp() {
         const orangH = 480;
         const paddingBawah = 0; 
 
-        // Render Kamera Lokal (Selalu Digambar di Sisi Kiri jika stream aktif)
+        // Cek apakah ada kamera remote yang aktif terhubung
+        const isRemoteActive = videoRemote.srcObject && !videoRemote.paused;
+
         if (localStream) {
-            const xLokal = 0 + (canvasComposite.width / 2 - orangW) / 2 + 100; 
+            // Jika berdua, posisi agak geser ke kiri (+100). Jika sendirian, posisi otomatis center pas di tengah (0).
+            const offsetJarak = isRemoteActive ? 100 : 0; 
+            const xLokal = 0 + (canvasComposite.width / 2 - orangW) / 2 + offsetJarak; 
             const yLokal = canvasComposite.height - orangH - paddingBawah;
             ctxComposite.drawImage(canvasLocal, xLokal, yLokal, orangW, orangH);
         }
 
-        // Render Kamera Remote (Hanya Digambar di Sisi Kanan jika ada stream masuk)
-        if (videoRemote.srcObject && !videoRemote.paused) {
+        if (isRemoteActive) {
             const xRemote = canvasComposite.width / 2 + (canvasComposite.width / 2 - orangW) / 2 - 100; 
             const yRemote = canvasComposite.height - orangH - paddingBawah;
             ctxComposite.drawImage(canvasRemote, xRemote, yRemote, orangW, orangH);
@@ -103,7 +95,6 @@ function initApp() {
         requestAnimationFrame(drawCompositeStage);
     }
 
-    // Akses Kamera Lokal
     navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false })
         .then(stream => {
             localStream = stream;
@@ -117,52 +108,60 @@ function initApp() {
                 }
                 detectionFrameLokal();
             });
-            // Jalankan looping panggung
             drawCompositeStage();
         })
         .catch(err => {
             console.error("Akses kamera gagal:", err);
-            alert("Harap izinkan akses kamera pada browser Anda!");
+            alert("Harap izinkan akses kamera!");
         });
 
-
-    // ==========================================
-    // 3. NETWORK KONEKSI PEERJS (ID 8 DIGIT)
-    // ==========================================
+    // 3. NETWORK CONNECTIONS WITH ICE SERVERS (STUN/TURN)
     const customId = generateShortId(8);
-    peer = new Peer(customId); 
+    
+    peer = new Peer(customId, {
+        config: {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' },
+                {
+                    urls: 'turn:openrelay.metered.ca:80',
+                    username: 'openrelay',
+                    credential: 'openrelay'
+                },
+                {
+                    urls: 'turn:openrelay.metered.ca:443',
+                    username: 'openrelay',
+                    credential: 'openrelay'
+                }
+            ],
+            sdpSemantics: 'unified-plan'
+        }
+    }); 
 
     peer.on('open', (id) => {
         document.getElementById('my-id').innerText = id;
     });
 
-    peer.on('error', (err) => {
-        console.error("PeerJS Error:", err);
-        connectionStatus.innerText = "Koneksi terputus/gagal.";
-    });
-
-    // Menangani Panggilan Video Masuk
     peer.on('call', (call) => {
         connectionStatus.innerText = "Menerima panggilan video...";
         call.answer(localStream);
         handleCall(call);
     });
 
-    // Menangani Sambungan Data Masuk
     peer.on('connection', (incomingDataConn) => {
         dataConn = incomingDataConn;
         setupDataListeners();
-        connectionStatus.innerText = "Terhubung dengan device remote!";
+        connectionStatus.innerText = "Terhubung dengan teman!";
         hasControl = false; 
         updateControlUI();
     });
 
-    // Tombol Hubungkan/Panggil Teman
     btnCall.addEventListener('click', () => {
         const peerId = peerIdInput.value.trim().toLowerCase();
-        if (peerId.length !== 8) return alert("Masukkan ID teman yang valid (8 Karakter)!");
+        if (peerId.length !== 8) return alert("Masukkan ID 8 Karakter!");
         
-        connectionStatus.innerText = "Memanggil device teman...";
+        connectionStatus.innerText = "Memanggil teman...";
         
         const call = peer.call(peerId, localStream);
         handleCall(call);
@@ -176,7 +175,7 @@ function initApp() {
         call.on('stream', (remoteStream) => {
             videoRemote.srcObject = remoteStream;
             videoRemote.addEventListener('playing', () => {
-                connectionStatus.innerText = "Kalian berdua satu panggung!";
+                connectionStatus.innerText = "Satu panggung berdua!";
                 async function detectionFrameRemote() {
                     if (!videoRemote.paused && !videoRemote.ended) {
                         await aiRemote.send({ image: videoRemote });
@@ -185,6 +184,15 @@ function initApp() {
                 }
                 detectionFrameRemote();
             });
+        });
+        
+        call.on('close', () => {
+            connectionStatus.innerText = "Koneksi terputus. Beralih ke mode sendiri.";
+            updateControlUI();
+        });
+        call.on('error', (err) => {
+            console.error("Call error:", err);
+            connectionStatus.innerText = "Gagal menyambungkan video.";
         });
     }
 
@@ -201,12 +209,25 @@ function initApp() {
                 updateControlUI();
             }
         });
+
+        dataConn.on('close', () => {
+            dataConn = null;
+            connectionStatus.innerText = "Koneksi data terputus. Mode sendiri aktif.";
+            hasControl = true;
+            updateControlUI();
+        });
     }
 
     function updateControlUI() {
-        currentControllerText.innerText = hasControl ? "Lokal (Anda)" : "Teman Anda (Jarak Jauh)";
-        btnSnap.disabled = !hasControl;
-        btnPass.disabled = !hasControl;
+        if (!dataConn) {
+            currentControllerText.innerText = "Mode Sendiri (Solo)";
+            btnSnap.disabled = false;
+            btnPass.disabled = true; // Tidak bisa lempar kendali kalau sendirian
+        } else {
+            currentControllerText.innerText = hasControl ? "Lokal (Anda)" : "Teman Anda";
+            btnSnap.disabled = !hasControl;
+            btnPass.disabled = !hasControl;
+        }
     }
 
     btnPass.addEventListener('click', () => {
@@ -216,14 +237,16 @@ function initApp() {
         dataConn.send({ type: 'PASS_CONTROL' });
     });
 
-
-    // ==========================================
-    // 4. SHUTTER & CARD GENERATOR
-    // ==========================================
+    // 4. SHUTTER & PHOTOS STRIP
     btnSnap.addEventListener('click', () => {
-        if (!hasControl || !dataConn) return alert("Pastikan sudah terhubung penuh dengan device teman.");
-        dataConn.send({ type: 'START_SHOOT' }); 
-        runShootSequence();
+        // PERUBAHAN UTAMA: Jika tidak ada teman, langsung jalankan jepretan lokal saja
+        if (!dataConn) {
+            runShootSequence();
+        } else {
+            if (!hasControl) return alert("Tunggu giliran kendali dari device teman.");
+            dataConn.send({ type: 'START_SHOOT' }); 
+            runShootSequence();
+        }
     });
 
     function runShootSequence() {
@@ -231,6 +254,9 @@ function initApp() {
         isCapturing = true;
         capturedPhotos = [];
         let photoCount = 0;
+        
+        // Nonaktifkan tombol saat proses foto berlangsung
+        btnSnap.disabled = true;
         
         function takeNext() {
             let timeLeft = 3;
@@ -253,6 +279,7 @@ function initApp() {
                             takeNext();
                         } else {
                             isCapturing = false;
+                            updateControlUI(); // Kembalikan state tombol
                             generatePhotoboothCard();
                         }
                     }, 400); 
@@ -276,17 +303,30 @@ function initApp() {
         
         stripCtx.clearRect(0, 0, stripCanvas.width, stripCanvas.height);
         
-        const xOffset = 20; 
-        let yOffset = 40;  
-        const targetW = 400; 
-        const targetH = 225; 
+        stripCtx.fillStyle = "#FFFFFF";
+        stripCtx.fillRect(0, 0, stripCanvas.width, stripCanvas.height);
+        
+        const targetW = 540;  
+        const targetH = 304;  
+        const paddingX = 30;  
+        let yOffset = 60;     
 
         capturedPhotos.forEach((photo) => {
-            stripCtx.fillStyle = "rgba(255, 255, 255, 0.05)";
-            stripCtx.fillRect(xOffset, yOffset, targetW, targetH);
-            stripCtx.drawImage(photo, xOffset, yOffset, targetW, targetH);
-            yOffset += targetH + 30; 
+            stripCtx.fillStyle = "rgba(0, 0, 0, 0.05)";
+            stripCtx.fillRect(paddingX + 4, yOffset + 4, targetW, targetH);
+            
+            stripCtx.drawImage(photo, paddingX, yOffset, targetW, targetH);
+            yOffset += targetH + 45; 
         });
+
+        stripCtx.fillStyle = "#222222";
+        stripCtx.font = "bold 32px sans-serif";
+        stripCtx.textAlign = "center";
+        stripCtx.fillText("PHOTOVAR", stripCanvas.width / 2, 1700);
+
+        stripCtx.fillStyle = "#666666";
+        stripCtx.font = "italic 20px sans-serif";
+        stripCtx.fillText("yang jauh menjadi dekat", stripCanvas.width / 2, 1735);
 
         stripCanvas.style.display = "inline-block";
         btnDownload.style.display = "inline-block";
@@ -294,8 +334,11 @@ function initApp() {
 
     btnDownload.addEventListener('click', () => {
         const link = document.createElement('a');
-        link.download = 'photobooth-berdua-transparan.png';
+        link.download = 'photovar-classic-strip.png';
         link.href = stripCanvas.toDataURL('image/png');
         link.click();
     });
+
+    // Jalankan inisialisasi UI awal agar tombol Snap langsung aktif semenjak aplikasi dibuka
+    updateControlUI();
 }
