@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>P2P Online Photobooth: Dua Orang dalam Satu Frame</title>
-    <!-- CSS Eksternal -->
+    
+    <!-- 1. CSS Eksternal -->
     <link rel="stylesheet" href="style.css">
-    <!-- MediaPipe Selfie Segmentation (AI) -->
+    
+    <!-- 2. PANGGIL LIBRARY SEBELUM SCRIPT UTAMA RUN (Wajib di Head) -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js" crossorigin="anonymous"></script>
-    <!-- PeerJS (Wajib HTTPS untuk GitHub Pages) -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
 <body>
@@ -32,7 +33,6 @@
         <p>Kalian berdua bertemu di sini secara real-time!</p>
         <div class="camera-stage">
             <h2 id="countdown"></h2>
-            <!-- Ini adalah canvas utama yang menggabungkan 2 video transparan -->
             <canvas id="canvas-composite" width="1280" height="720"></canvas>
         </div>
         <div class="shutter-controls controls">
@@ -42,7 +42,7 @@
         </div>
     </div>
 
-    <!-- Area Preview Lokal & Remote (Disembunyikan, hanya untuk proses AI latar belakang) -->
+    <!-- Area Preview Jalur Belakang AI -->
     <div class="previews-zone" style="display:none;">
         <video id="video-local" autoplay playsinline></video>
         <canvas id="canvas-local" width="640" height="480"></canvas>
@@ -59,7 +59,7 @@
     </div>
 </div>
 
-<!-- JS Eksternal -->
+<!-- 3. SCRIPT LOGIKA UTAMA DI MAINKAN PALING AKHIR (Sebelum tutup body) -->
 <script src="app.js"></script>
 </body>
 </html>
