@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="style.css">
     <!-- MediaPipe Selfie Segmentation (AI) -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js" crossorigin="anonymous"></script>
-    <!-- PeerJS (P2P Streaming) -->
+    <!-- PeerJS (Wajib HTTPS untuk GitHub Pages) -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
 <body>
@@ -21,79 +21,7 @@
     <div class="controls">
         <h3>1. Koneksi Device</h3>
         <p>ID Device Anda: <span id="my-id">Menghubungkan server...</span></p>
-        <input type="text" id="peer-id-input" placeholder="Masukkan ID Device Teman">
-        <button type="button" class="secondary" id="btn-call">Hubungkan & Panggil</button>
-        <div class="status" id="connection-status">Belum terhubung ke device lain.</div>
-    </div>
-
-    <!-- Area Komposit (Frame Utama yang Dilihat) -->
-    <div class="composite-zone">
-        <h3>2. Area Foto Gabungan</h3>
-        <p>Kalian berdua bertemu di sini!</p>
-        <div class="camera-stage">
-            <h2 id="countdown"></h2>
-            <!-- Ini adalah canvas utama yang menggabungkan 2 video transparan -->
-            <canvas id="canvas-composite" width="1280" height="720"></canvas>
-        </div>
-        <div class="shutter-controls controls">
-            <p>Sesi Kendali: <span id="current-controller">Lokal (Anda)</span></p>
-            <button type="button" id="btn-snap">Ambil Foto Berdua (3x)</button>
-            <button type="button" class="secondary" id="btn-pass">Lempar Kendali</button>
-        </div>
-    </div>
-
-    <!-- Area Preview Lokal & Remote (Sebenarnya tidak perlu ditampilkan, tapi bagus untuk debug) -->
-    <div class="previews-zone controls" style="display:none;">
-        <h3>3. Review Pemotongan Latar (Hanya untuk Debug)nice bro! Tapi memang ini yang bikin seru. Saya salah paham sebelumnya, saya pikir sistemnya cuma satu orang sebagai *remote trigger*, bukan mereka **benar-benar bertemu** secara visual di dalam satu *frame* yang sama secara *real-time*, lalu difoto bareng.
-
-Kalau maunya kayak gitu, berarti kita harus mengubah sistemnya menjadi **seperti *video call***, di mana *stream* video kamera lokal dan *stream* video dari *device* teman (jarak jauh) **keduanya** diproses secara *real-time* di satu Canvas besar.
-
-Ini tantangannya: Kita harus menjalankan dua proses AI sekaligus (atau setidaknya memproses dua *source* video yang berbeda), lalu menggabungkan keduanya ke satu panggung visual (Canvas) secara akurat.
-
-Berikut adalah blueprint dan kodenya yang sudah diperbarui:
-
----
-
-## Blueprint Sistem "Dua Orang Satu Frame"
-
-1.  **Dua Streaming Video:** Kedua perangkat saling mengirim streaming video kameranya lewat WebRTC (PeerJS Call). Jadi, setiap perangkat punya 1 video lokal dan 1 video remote.
-2.  **Pemotongan Latar di Masing-masing Device:** Perangkat akan memotong background video kameranya sendiri (membuatnya transparan). Ini untuk memastikan proses AI tidak terlalu berat di satu sisi.
-3.  **Penggabungan ke Satu Frame:** Kita akan menggunakan satu Canvas besar (panggung) di *device* yang mau mengambil foto. Canvas ini bertugas menggabungkan 2 video tadi (setelah dipotong background-nya) dan menempatkannya bersandingan, seolah-olah mereka duduk berdua di studio yang sama.
-4.  **Kontrol Jarak Jauh (Dilempar):** Kita tetap butuh *data channel* (PeerJS Connection) untuk mengirim perintah "Ambil Foto" atau "Lempar Kendali" dari jarak jauh.
-
----
-
-## Implementasi Kode (Tetap Terpisah)
-
-### 1. `index.html`
-
-Di sini kita butuh dua elemen video (`video-local` dan `video-remote`) dan dua canvas pembantu (`canvas-local` dan `canvas-remote`). Hasil gabungannya akan ditampilkan di `canvas-composite` (Panggung Utama).
-
-```html
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P Online Photobooth: Dua Orang dalam Satu Frame</title>
-    <!-- CSS Eksternal -->
-    <link rel="stylesheet" href="style.css">
-    <!-- MediaPipe Selfie Segmentation (AI) -->
-    <script src="[https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js](https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js)" crossorigin="anonymous"></script>
-    <!-- PeerJS (P2P Streaming & Data) -->
-    <script src="[https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js](https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js)"></script>
-</head>
-<body>
-
-<div class="container">
-    <h1>📸 P2P AI Photobooth: Satu Frame Berdua</h1>
-    <p>Hubungkan, Potong Latar, dan Foto Bareng Jarak Jauh</p>
-
-    <!-- Kontrol Koneksi P2P -->
-    <div class="controls">
-        <h3>1. Koneksi Device</h3>
-        <p>ID Device Anda: <span id="my-id">Menghubungkan server...</span></p>
-        <input type="text" id="peer-id-input" placeholder="Masukkan ID Device Teman">
+        <input type="text" id="peer-id-input" placeholder="Masukkan 8 Digit ID Teman">
         <button type="button" class="secondary" id="btn-call">Hubungkan & Panggil</button>
         <div class="status" id="connection-status">Belum terhubung ke device lain.</div>
     </div>
@@ -114,24 +42,17 @@ Di sini kita butuh dua elemen video (`video-local` dan `video-remote`) dan dua c
         </div>
     </div>
 
-    <!-- Area Preview Lokal & Remote (Sembunyikan jika tidak untuk debug) -->
-    <div class="previews-zone controls" style="display:none;">
-        <h3>3. Review Pemotongan Latar</h3>
-        <div class="preview-group">
-            <h4>Kamera Anda</h4>
-            <video id="video-local" autoplay playsinline style="display: none;"></video>
-            <canvas id="canvas-local" width="640" height="480"></canvas>
-        </div>
-        <div class="preview-group">
-            <h4>Kamera Teman</h4>
-            <video id="video-remote" autoplay playsinline style="display: none;"></video>
-            <canvas id="canvas-remote" width="640" height="480"></canvas>
-        </div>
+    <!-- Area Preview Lokal & Remote (Disembunyikan, hanya untuk proses AI latar belakang) -->
+    <div class="previews-zone" style="display:none;">
+        <video id="video-local" autoplay playsinline></video>
+        <canvas id="canvas-local" width="640" height="480"></canvas>
+        <video id="video-remote" autoplay playsinline></video>
+        <canvas id="canvas-remote" width="640" height="480"></canvas>
     </div>
 
     <!-- Hasil Akhir Kartu Photobooth -->
     <div class="result-zone">
-        <h3>4. Hasil Kartu Foto Berdua</h3>
+        <h3>3. Hasil Kartu Foto Berdua</h3>
         <canvas id="photos-strip" width="440" height="1100"></canvas>
         <br>
         <button type="button" id="btn-download">Unduh Kartu (PNG Transparan)</button>
