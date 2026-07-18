@@ -27,12 +27,19 @@ body {
     border: 1px solid #444;
     background: #2a2a2a;
     color: #fff;
+    text-align: center;
+    font-size: 16px;
+    letter-spacing: 1px;
 }
 
 #my-id {
     color: #2ed573;
     font-weight: bold;
-    font-size: 1.2em;
+    font-size: 1.3em;
+    letter-spacing: 1px;
+    background: rgba(46, 213, 115, 0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
 }
 
 #current-controller {
@@ -68,7 +75,6 @@ button.secondary {
     margin: 10px 0;
 }
 
-/* Panggung Visual */
 .composite-zone {
     margin-top: 30px;
 }
@@ -100,21 +106,6 @@ button.secondary {
     z-index: 10;
 }
 
-/* Review Zone */
-.previews-zone .preview-group {
-    display: inline-block;
-    margin: 10px;
-    text-align: center;
-}
-
-#canvas-local, #canvas-remote {
-    width: 320px;
-    height: 240px;
-    background: #000;
-    border: 1px solid #555;
-}
-
-/* Hasil Akhir */
 .result-zone {
     margin-top: 40px;
 }
